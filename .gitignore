@@ -1,0 +1,5 @@
+# Specify filepatterns you want git to ignore.
+.idea/*
+venv/*
+.DS_Store
+__pycache__/
