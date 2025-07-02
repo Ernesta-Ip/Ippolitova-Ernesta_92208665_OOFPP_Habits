@@ -1,4 +1,3 @@
-import calendar
 from collections import Counter as _Counter
 from datetime import datetime, timedelta
 from db import get_counter_data, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
@@ -14,6 +13,7 @@ def analyse_counters(db, mode, counter_name=None, streak_type="current"):
       - "count": return int count of events for counter_name (count entries for exact habit)
       - "list_all": return [name, ...] (list of all habits)
       - "group_by_period_type": return { period_type: [name, ...], ... } (list of habits with the same periodicity)
+      - "streak": return int streak length (current or longest)
     """
     cur = db.cursor()
 
