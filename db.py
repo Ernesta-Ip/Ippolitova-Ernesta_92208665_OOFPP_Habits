@@ -1,8 +1,8 @@
 import sqlite3
 from datetime import datetime
 
-PERIOD_DAILY   = 1
-PERIOD_WEEKLY  = 2
+PERIOD_DAILY = 1
+PERIOD_WEEKLY = 2
 PERIOD_MONTHLY = 3
 
 def get_db(name="main.db"):
