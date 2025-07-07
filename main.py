@@ -1,7 +1,7 @@
 # main.py
 import questionary
 from db import get_db, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
-from counter import Counter
+from counter import Counter, add_event
 from analyse import analyse_counters, UNIT_NAMES
 
 def get_period_type_for(name: str, db) -> int:
@@ -61,8 +61,8 @@ def cli():
         elif choice == "Complete the Task":
             name = questionary.text("What is the name of the habit?").ask()
             counter = Counter(name, description="", period_type=0, period_count=0)
-            counter.increment()
-            counter.add_event(db)
+            # counter.increment()
+            add_event(name, db)
             print(f"➕ completed '{name}'.")
 
         elif choice == "Analyse":
@@ -106,7 +106,11 @@ def cli():
                     length = analyse_counters(db, "streak", counter_name=name, streak_type="current")
                     period_type = get_period_type_for(name, db)
                     unit = UNIT_NAMES.get(period_type, "period")
-                    print(f" ➤ Current {unit}-streak for '{name}': {length}")
+                    unit_label = unit if length == 1 else unit + "s"
+                    print(
+                        f" ➤ You have established a streak of {length} {unit_label} "
+                        f"for '{name}'."
+                    )
 
                 else:
                     # Scan all habits for their longest-streak

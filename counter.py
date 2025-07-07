@@ -15,11 +15,11 @@ class Counter:
         self.period_count = period_count
         self.count = 0
 
-    def increment(self):
-        self.count += 1
+    # def increment(self):
+    #     self.count += 1
 
-    def reset(self):
-        self.count = 0
+    # def reset(self):
+    #     self.count = 0
 
     def __str__(self):
         pname = Counter.TYPE_NAMES.get(self.period_type, "?")
@@ -28,5 +28,5 @@ class Counter:
     def store(self, db):
         add_counter(db, self.name, self.description, self.period_type, self.period_count)
 
-    def add_event(self, db, date: str = None):
-        increment_counter(db, self.name, date)
+def add_event(name, db, date: str = None):
+    increment_counter(db, name, date)
