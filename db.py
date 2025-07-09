@@ -46,7 +46,7 @@ def add_counter(db, name, description, period_type, period_count):
     )
     db.commit()
 
-#Addition of even of the exact habit
+#Addition of event of the exact habit
 def increment_counter(db, counter_id, event_time: str = None):
     cur = db.cursor()
     if not event_time:

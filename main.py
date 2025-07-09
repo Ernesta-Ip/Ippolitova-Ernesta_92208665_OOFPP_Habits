@@ -4,6 +4,7 @@ from counter import Counter, add_event, delete_event
 from analyse import *
 
 def cli():
+    global completed_at
     db = get_db()
 
     #Are you ready question
@@ -58,7 +59,6 @@ def cli():
                 counter = Counter(name, desc, period_choice, period_count)
                 counter.store(db)
                 print(f" Habit '{name}' created: {period_count}× per {unit}.")
-
 
         elif choice == "Delete":
             cursor = db.cursor()

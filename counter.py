@@ -15,12 +15,6 @@ class Counter:
         self.period_count = period_count
         self.count = 0
 
-    # def increment(self):
-    #     self.count += 1
-
-    # def reset(self):
-    #     self.count = 0
-
     def __str__(self):
         pname = Counter.TYPE_NAMES.get(self.period_type, "?")
         return f"{self.name}: {self.count} — {self.period_count}× per {pname}"
