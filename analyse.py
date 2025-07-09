@@ -87,12 +87,12 @@ def period_index(ts: datetime, period_type: int) -> tuple:
     - monthly → (YYYY, MM)
     """
     if period_type == PERIOD_DAILY:
-        return (ts.year, ts.month, ts.day)
+        return ts.year, ts.month, ts.day
     elif period_type == PERIOD_WEEKLY:
         # iso calendar()[1] gives ISO week number
-        return (ts.isocalendar()[0], ts.isocalendar()[1])
+        return ts.isocalendar()[0], ts.isocalendar()[1]
     elif period_type == PERIOD_MONTHLY:
-        return (ts.year, ts.month)
+        return ts.year, ts.month
     else:
         raise ValueError("Unknown period type")
 
@@ -102,7 +102,7 @@ def previous_period(idx: tuple, period_type: int) -> tuple:
     """
     if period_type == PERIOD_DAILY:
         dt = datetime(idx[0], idx[1], idx[2]) - timedelta(days=1)
-        return (dt.year, dt.month, dt.day)
+        return dt.year, dt.month, dt.day
     elif period_type == PERIOD_WEEKLY:
         # Convert back to a date, subtract 1 week
         # Use Monday of that ISO week:
@@ -114,13 +114,13 @@ def previous_period(idx: tuple, period_type: int) -> tuple:
         else:
             week -= 1
         dt = datetime.strptime(f'{year}-W{week}-1', "%G-W%V-%u")
-        return (dt.isocalendar()[0], dt.isocalendar()[1])
+        return dt.isocalendar()[0], dt.isocalendar()[1]
     elif period_type == PERIOD_MONTHLY:
         year, month = idx
         if month == 1:
-            return (year - 1, 12)
+            return year - 1, 12
         else:
-            return (year, month - 1)
+            return year, month - 1
     else:
         raise ValueError("Unknown period type")
 
@@ -131,21 +131,21 @@ def next_period(idx: tuple, period_type: int) -> tuple:
     if period_type == PERIOD_DAILY:
         year, month, day = idx
         dt = datetime(year, month, day) + timedelta(days=1)
-        return (dt.year, dt.month, dt.day)
+        return dt.year, dt.month, dt.day
 
     elif period_type == PERIOD_WEEKLY:
         year, week = idx
         # find the Monday of this ISO week
         dt = datetime.strptime(f'{year}-W{week}-1', "%G-W%V-%u")
         dt_next = dt + timedelta(weeks=1)
-        return (dt_next.isocalendar()[0], dt_next.isocalendar()[1])
+        return dt_next.isocalendar()[0], dt_next.isocalendar()[1]
 
     elif period_type == PERIOD_MONTHLY:
         year, month = idx
         if month == 12:
-            return (year + 1, 1)
+            return year + 1, 1
         else:
-            return (year, month + 1)
+            return year, month + 1
 
     else:
         raise ValueError("Unknown period type")
@@ -155,8 +155,8 @@ def get_period_counts(timestamps: list, period_type: int) -> dict:
     timestamps: list of datetime objects
     returns: { period_index: count_of_events_in_that_period }
     """
-    idxs = [period_index(ts, period_type) for ts in timestamps]
-    return dict(_Counter(idxs))
+    idx = [period_index(ts, period_type) for ts in timestamps]
+    return dict(_Counter(idx))
 
 def get_period_count_for(name: str, db) -> int:
     """
