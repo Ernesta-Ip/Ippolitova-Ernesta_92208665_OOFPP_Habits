@@ -20,10 +20,10 @@ def get_period_type_for(name: str, db) -> int:
         raise ValueError(f"No habit named '{name}'")
     return row[0]
 
-def count_events(db, counter_name=None):
-    if not counter_name:
-        raise ValueError("must pass counter_name for 'count' mode")
-    data = get_counter_data(db, counter_name)
+def count_events(db, counter_id=None):
+    if not counter_id:
+        raise ValueError("must pass counter_id for 'count' mode")
+    data = get_counter_data(db, counter_id)
     return len(data)
 
 def list_all(db):
@@ -149,7 +149,6 @@ def next_period(idx: tuple, period_type: int) -> tuple:
 
     else:
         raise ValueError("Unknown period type")
-
 
 def get_period_counts(timestamps: list, period_type: int) -> dict:
     """

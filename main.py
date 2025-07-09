@@ -1,13 +1,12 @@
-# main.py
 import questionary
-from datetime import datetime
-from db import get_db, get_counter_data, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
+from db import get_db
 from counter import Counter, add_event, delete_event
-from analyse import period_index, count_events, list_all, group_by_period_type, current_streak, longest_streak, get_period_type_for, get_period_count_for, UNIT_NAMES
+from analyse import *
 
 def cli():
     db = get_db()
 
+    #Are you ready question
     choice = questionary.select(
         "Are you ready?",
         choices=["Yes", "No"]
@@ -18,6 +17,7 @@ def cli():
         return
     print("Welcome to the Habit Tracker!")
 
+    #Actions with habits
     while True:
         choice = questionary.select(
             "What would you like to do?",
@@ -26,10 +26,9 @@ def cli():
 
         if choice == "Exit":
             print("Bye!")
-            return
+            break
 
         elif choice == "Create":
-            while True:
                 name = questionary.text("What is the name of the habit?").ask()
                 cursor = db.cursor()
                 cursor.execute("SELECT 1 FROM counter WHERE name = ?", (name,))
@@ -59,7 +58,7 @@ def cli():
                 counter = Counter(name, desc, period_choice, period_count)
                 counter.store(db)
                 print(f" Habit '{name}' created: {period_count}× per {unit}.")
-                break
+
 
         elif choice == "Delete":
             cursor = db.cursor()
@@ -158,7 +157,7 @@ def cli():
                     "Which habit do you want to count tasks for?",
                     choices=habit_names
                 ).ask()
-                cnt = count_events(db, counter_name=name)
+                cnt = count_events(db, counter_id=name)
                 print(f" ➤ '{name}' has been incremented {cnt} times.")
 
             elif analysis == "list_all":

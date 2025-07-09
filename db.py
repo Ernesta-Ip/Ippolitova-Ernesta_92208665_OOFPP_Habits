@@ -10,61 +10,34 @@ def get_db(name="main.db"):
     create_tables(db)
     return db
 
+# Initial creation of tables counter and tracker
 def create_tables(db):
     cur = db.cursor()
 
     # ——— Table counter ———
     cur.execute("""
     CREATE TABLE IF NOT EXISTS counter (
-        name TEXT PRIMARY KEY,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT UNIQUE NOT NULL,
         description TEXT,
         period_type INTEGER NOT NULL CHECK(period_type IN (1,2,3)),
         period_count INTEGER NOT NULL
     )
     """)
 
-    try:
-        cur.execute("ALTER TABLE counter ADD COLUMN period_type INTEGER NOT NULL DEFAULT 1")
-        cur.execute("ALTER TABLE counter ADD CHECK(period_type IN (1,2,3))")
-    except sqlite3.OperationalError:
-        pass
-    try:
-        cur.execute("ALTER TABLE counter ADD COLUMN period_count INTEGER NOT NULL DEFAULT 1")
-    except sqlite3.OperationalError:
-        pass
-
     # ——— Table tracker ———
     cur.execute("""
     CREATE TABLE IF NOT EXISTS tracker (
-        counterName TEXT,
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        counter_id INTEGER NOT NULL,
         timestamp DATETIME NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-        FOREIGN KEY(counterName) REFERENCES counter(name)
+        FOREIGN KEY(counter_id) REFERENCES counter(id) ON DELETE CASCADE
     )
     """)
 
-    #migration for the previous tracker table without timestamp
-    cur.execute("PRAGMA table_info(tracker)")
-    cols = [row[1] for row in cur.fetchall()]
-    if 'timestamp' not in cols:
-        cur.execute("ALTER TABLE tracker RENAME TO tracker_old")
-        cur.execute("""
-        CREATE TABLE tracker (
-            counterName TEXT,
-            timestamp DATETIME NOT NULL DEFAULT (CURRENT_TIMESTAMP),
-            FOREIGN KEY(counterName) REFERENCES counter(name)
-        )
-        """)
-        # copy old tables
-        cur.execute("""
-        INSERT INTO tracker (counterName, timestamp)
-        SELECT counterName, CURRENT_TIMESTAMP
-        FROM tracker_old
-        """)
-        #delete old table
-        cur.execute("DROP TABLE tracker_old")
-
     db.commit()
 
+#Addition of new habit
 def add_counter(db, name, description, period_type, period_count):
     cur = db.cursor()
     cur.execute(
@@ -73,20 +46,34 @@ def add_counter(db, name, description, period_type, period_count):
     )
     db.commit()
 
-def increment_counter(db, name, event_time: str = None):
+#Addition of even of the exact habit
+def increment_counter(db, counter_id, event_time: str = None):
     cur = db.cursor()
     if not event_time:
         event_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     cur.execute(
-        "INSERT INTO tracker (counterName, timestamp) VALUES (?, ?)",
-        (name, event_time)
+        "INSERT INTO tracker (counter_id, timestamp) VALUES (?, ?)",
+        (counter_id, event_time)
     )
     db.commit()
 
-def get_counter_data(db, name):
+#Fetching data on the events of the habit
+def get_counter_data(db, counter_id):
     cur = db.cursor()
-    cur.execute("SELECT counterName, timestamp FROM tracker WHERE counterName = ?", (name,))
+    cur.execute("SELECT counter_id, timestamp FROM tracker WHERE counter_id = ?", (counter_id,))
     return cur.fetchall()
+
+#Deletion of habit
+def delete_counter(db, habit_name: str):
+    """
+    Remove the habit itself from `counter`.
+    """
+    cursor = db.cursor()
+    cursor.execute(
+        "DELETE FROM counter WHERE name = ?",
+        (habit_name,)
+    )
+    db.commit()
 
 def delete_tracker_entries(db, habit_name: str):
     """
@@ -99,13 +86,3 @@ def delete_tracker_entries(db, habit_name: str):
     )
     db.commit()
 
-def delete_counter(db, habit_name: str):
-    """
-    Remove the habit itself from `counter`.
-    """
-    cursor = db.cursor()
-    cursor.execute(
-        "DELETE FROM counter WHERE name = ?",
-        (habit_name,)
-    )
-    db.commit()
