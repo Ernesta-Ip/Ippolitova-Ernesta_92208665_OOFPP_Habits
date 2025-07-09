@@ -87,3 +87,25 @@ def get_counter_data(db, name):
     cur = db.cursor()
     cur.execute("SELECT counterName, timestamp FROM tracker WHERE counterName = ?", (name,))
     return cur.fetchall()
+
+def delete_tracker_entries(db, habit_name: str):
+    """
+    Remove all rows from `tracker` for this habit.
+    """
+    cursor = db.cursor()
+    cursor.execute(
+        "DELETE FROM tracker WHERE counterName = ?",
+        (habit_name,)
+    )
+    db.commit()
+
+def delete_counter(db, habit_name: str):
+    """
+    Remove the habit itself from `counter`.
+    """
+    cursor = db.cursor()
+    cursor.execute(
+        "DELETE FROM counter WHERE name = ?",
+        (habit_name,)
+    )
+    db.commit()

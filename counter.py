@@ -1,4 +1,4 @@
-from db import add_counter, increment_counter, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
+from db import add_counter, increment_counter, delete_counter, delete_tracker_entries, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
 
 class Counter:
 
@@ -30,3 +30,12 @@ class Counter:
 
 def add_event(name, db, date: str = None):
     increment_counter(db, name, date)
+
+def delete_event(db, name: str):
+    """
+    Delete a habit and all its records.
+    """
+    # 1) delete all tracker rows
+    delete_tracker_entries(db, name)
+    # 2) delete the counter row
+    delete_counter(db, name)

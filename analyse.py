@@ -173,4 +173,3 @@ def get_period_count_for(name: str, db) -> int:
     if row is None:
         raise ValueError(f"Habit '{name}' not found in your database.")
     return row[0]
-

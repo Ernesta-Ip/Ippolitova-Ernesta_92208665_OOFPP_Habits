@@ -2,7 +2,7 @@
 import questionary
 from datetime import datetime
 from db import get_db, get_counter_data, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
-from counter import Counter, add_event
+from counter import Counter, add_event, delete_event
 from analyse import period_index, count_events, list_all, group_by_period_type, current_streak, longest_streak, get_period_type_for, get_period_count_for, UNIT_NAMES
 
 def cli():
@@ -21,14 +21,14 @@ def cli():
     while True:
         choice = questionary.select(
             "What would you like to do?",
-            choices=["Create", "Complete the Task", "Analyse", "Exit"]
+            choices=["Create", "Delete", "Complete the Task", "Analyse", "Exit"]
         ).ask()
 
         if choice == "Exit":
             print("Bye!")
             return
 
-        if choice == "Create":
+        elif choice == "Create":
             while True:
                 name = questionary.text("What is the name of the habit?").ask()
                 cursor = db.cursor()
@@ -61,6 +61,32 @@ def cli():
                 print(f" Habit '{name}' created: {period_count}× per {unit}.")
                 break
 
+        elif choice == "Delete":
+            cursor = db.cursor()
+            cursor.execute("SELECT name FROM counter")
+            rows = cursor.fetchall()
+            habit_names = [row[0] for row in rows]
+
+            if not habit_names:
+                print("You don't have any habits yet. Please create one.\n")
+                continue
+
+            name = questionary.select(
+                "Which habit do you want to delete?",
+                choices=habit_names
+            ).ask()
+
+            # ask for confirmation
+            confirm = questionary.confirm(
+                f"Are you sure you want to delete '{name}' and all its records?"
+            ).ask()
+
+            if confirm:
+                delete_event(db, name)
+                print(f"Habit '{name}' and its history have been deleted.\n")
+            else:
+                print("Deletion cancelled.\n")
+
         elif choice == "Complete the Task":
             cursor = db.cursor()
             cursor.execute("SELECT name FROM counter")
@@ -75,6 +101,8 @@ def cli():
                 "Which habit did you complete?",
                 choices=habit_names
             ).ask()
+
+            #setting timestamp manually
 
             set_timestamp_manually = questionary.confirm(
                 "Do you want to set the completion timestamp manually?",
@@ -116,9 +144,22 @@ def cli():
                 ).ask()
 
             if analysis == "count":
-                    name = questionary.text("Name of the habit to count:").ask()
-                    cnt = count_events(db, counter_name=name)
-                    print(f" ➤ '{name}' has been incremented {cnt} times.")
+                # Select the habit to be counted
+                cursor = db.cursor()
+                cursor.execute("SELECT name FROM counter")
+                rows = cursor.fetchall()
+                habit_names = [row[0] for row in rows]
+
+                if not habit_names:
+                    print("You don't have any habits yet. Please create one.\n")
+                    continue
+
+                name = questionary.select(
+                    "Which habit do you want to count tasks for?",
+                    choices=habit_names
+                ).ask()
+                cnt = count_events(db, counter_name=name)
+                print(f" ➤ '{name}' has been incremented {cnt} times.")
 
             elif analysis == "list_all":
                     all_names = list_all(db)
@@ -181,6 +222,7 @@ def cli():
                     # TODO: while in former cases, your analysis_counters yields all the results, which could be printed,
                     #   in the case of the longest "streak" analysis you need to call this function even twice, not to
                     #   mention, that half of the evaluation happens outside of the function. Why is that?
+
                     if which == "longest":
                         # fetch all habit names
                         cursor = db.cursor()
