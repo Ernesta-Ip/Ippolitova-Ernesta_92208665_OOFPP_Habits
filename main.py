@@ -1,9 +1,9 @@
 # main.py
 import questionary
 from datetime import datetime
-from db import get_db, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
+from db import get_db, get_counter_data, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
 from counter import Counter, add_event
-from analyse import count_events, list_all, group_by_period_type, current_streak, longest_streak, get_period_type_for, get_period_count_for, UNIT_NAMES
+from analyse import period_index, count_events, list_all, group_by_period_type, current_streak, longest_streak, get_period_type_for, get_period_count_for, UNIT_NAMES
 
 def cli():
     db = get_db()
@@ -91,7 +91,7 @@ def cli():
                     try:
                         completed_at = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
                     except ValueError:
-                        print(f"❌ '{ts_str}' is not a valid timestamp. Please use YYYY-MM-DD HH:MM:SS.\n")
+                        print(f"'{ts_str}' is not a valid timestamp. Please use YYYY-MM-DD HH:MM:SS.\n")
                         continue
                     break
             else:
@@ -99,7 +99,7 @@ def cli():
             try:
                 add_event(name, db, completed_at)
             except Exception as e:
-                print(f"❌ Could not record completion for '{name}': {e}\n")
+                print(f" Could not record completion for '{name}': {e}\n")
             else:
                 ts_out = completed_at.strftime("%Y-%m-%d %H:%M:%S")
                 print(f"➕ Completed '{name}' on {ts_out}.\n")
@@ -114,12 +114,6 @@ def cli():
                         questionary.Choice("Streak length", "streak"),
                         ]
                 ).ask()
-
-                # TODO: your analysis function analyse_counters seems to yield different return types. This is at least
-                #   bad design. See "Clean Code, Robert C. Martin" and
-                #   PEP 484, Python Type Hints: https://peps.python.org/pep-0484/
-                #   the solution is quite simple here, as you even pass appropriate parameter to the function:
-                #   for every kind of different analysis, define its own function
 
             if analysis == "count":
                     name = questionary.text("Name of the habit to count:").ask()
@@ -146,6 +140,7 @@ def cli():
                     # TODO: while in former cases, your analysis_counters yields all the results, which could be printed,
                     #   in the case of the current "streak" analysis you need more functions to get e.g.,
                     #   period_type, unit, unit_label. Why is that?
+
                     if which == "current":
                         # Select the habit to count the current streak
                         cursor = db.cursor()
@@ -163,20 +158,15 @@ def cli():
                         ).ask()
 
                         #settings for the habit
-
                         period_type = get_period_type_for(name, db)
                         required = get_period_count_for(name, db)
 
                         #setting the dictionary
                         period_counts = {}
-                        cursor.execute(
-                            "SELECT timestamp FROM tracker WHERE counterName = ?",
-                            (name,)
-                        )
-                        for (ts_str,) in cursor.fetchall():
-                            ts = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
-                            idx = period_index(ts, period_type)
-                            period_counts[idx] = period_counts.get(idx, 0) + 1
+                        for _, ts_str in get_counter_data(db, name):
+                           ts = datetime.fromisoformat(ts_str)
+                           idx = period_index(ts, period_type)
+                           period_counts[idx] = period_counts.get(idx, 0) + 1
 
                         #calculate the current streak
                         length = current_streak(period_counts, period_type, required)
@@ -188,39 +178,53 @@ def cli():
                             f"{length} {unit_label} for '{name}'.\n"
                         )
 
-
-
                     # TODO: while in former cases, your analysis_counters yields all the results, which could be printed,
                     #   in the case of the longest "streak" analysis you need to call this function even twice, not to
                     #   mention, that half of the evaluation happens outside of the function. Why is that?
+                    if which == "longest":
+                        # fetch all habit names
+                        cursor = db.cursor()
+                        cursor.execute("SELECT name FROM counter")
+                        rows = cursor.fetchall()
+                        habit_names = [row[0] for row in rows]
 
+                        if not habit_names:
+                            print("You don't have any habits yet. Please create one.\n")
+                            continue
 
-                    else:
-                        # Scan all habits for their longest-streak
-                        habits = longest_streak(db, "list_all")
-                        best = {"name": None, "length": 0, "period_type": None}
-                        for name in habits:
-                            length = longest_streak(
-                                db,
-                                counter_name=name,
-                                streak_type="longest"
-                            )
-                            if length > best["length"]:
-                                best.update({
-                                    "name": name,
-                                    "length": length,
-                                    "period_type": get_period_type_for(name, db)
-                                })
+                        max_length = 0
+                        best_habit = None
+                        best_unit = "period"
 
-                        if best["name"] is None:
-                            print(" ➤ No habits found.")
+                        # for each habit, compute its longest streak
+                        for name in habit_names:
+                            period_type = get_period_type_for(name, db)
+                            required = get_period_count_for(name, db)
 
+                            # build count-by-period for this habit
+                            period_counts = {}
+                            for _, ts_str in get_counter_data(db, name):
+                                ts = datetime.fromisoformat(ts_str)
+                                idx = period_index(ts, period_type)
+                                period_counts[idx] = period_counts.get(idx, 0) + 1
+
+                            length = longest_streak(period_counts, period_type, required)
+
+                            # track the overall best
+                            if length > max_length:
+                                max_length = length
+                                best_habit = name
+                                best_unit = UNIT_NAMES.get(period_type, "period")
+
+                        if max_length == 0:
+                            print("➤ You haven't met the requirement for any streak yet.\n")
                         else:
-                            unit = UNIT_NAMES.get(best["period_type"], "period")
+                            unit_label = best_unit if max_length == 1 else best_unit + "s"
                             print(
-                                f" ➤ Longest streak overall: "
-                                f"'{best['name']}' with a {best['length']}-{unit}-streak."
+                                f"➤ Your longest streak overall is {max_length} "
+                                f"{unit_label} on '{best_habit}'.\n"
                             )
+
 
 if __name__ == "__main__":
     cli()

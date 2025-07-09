@@ -40,46 +40,6 @@ def group_by_period_type (db):
         groups.setdefault(period_type, []).append(name)
     return { UNIT_NAMES.get(k, "?"): v for k,v in groups.items() }
 
-# def current_streak(db, counter_name=None, streak_type="current"):
-#     if not counter_name:
-#         raise ValueError("Must pass counter_name for 'streak' mode")
-#     # 1. load metadata for this counter
-#     cur = db.cursor()
-#     cur.execute("SELECT period_type, period_count FROM counter WHERE name = ?", (counter_name,))
-#     row = cur.fetchone()
-#     if not row:
-#         raise ValueError(f"No habit named '{counter_name}'")
-#     period_type, period_count = row
-#
-#     # 2. load and parse timestamps
-#     raw = get_counter_data(db, counter_name)
-#     timestamps = [datetime.fromisoformat(ts) for _, ts in raw]
-#
-#     # 3. bucket and count
-#     buckets = get_period_counts(timestamps, period_type)
-#
-#     return current_streak(buckets, period_type, period_count)
-#
-# def longest_streak(db, counter_name=None, streak_type="current"):
-#     if not counter_name:
-#         raise ValueError("must pass counter_name for 'streak' mode")
-#     # 1. load metadata for this counter
-#     cur = db.cursor()
-#     cur.execute("SELECT period_type, period_count FROM counter WHERE name = ?", (counter_name,))
-#     row = cur.fetchone()
-#     if not row:
-#         raise ValueError(f"No habit named '{counter_name}'")
-#     period_type, period_count = row
-#
-#     # 2. load and parse timestamps
-#     raw = get_counter_data(db, counter_name)
-#     timestamps = [datetime.fromisoformat(ts) for _, ts in raw]
-#
-#     # 3. bucket and count
-#     buckets = get_period_counts(timestamps, period_type)
-#
-#     return longest_streak(buckets, period_type, period_count)
-
 def current_streak(period_counts: dict, period_type: int, required: int) -> int:
     """
     Starting from the current period, count how many
@@ -89,47 +49,35 @@ def current_streak(period_counts: dict, period_type: int, required: int) -> int:
     now_idx = period_index(datetime.now(), period_type)
     idx = now_idx
 
-    while True:
-        if period_counts.get(idx, 0) >= required:
-            streak += 1
-            idx = previous_period(idx, period_type)
-        else:
-            break
+    while period_counts.get(idx, 0) >= required:
+        streak += 1
+        idx = previous_period(idx, period_type)
     return streak
 
 def longest_streak(period_counts: dict, period_type: int, required: int) -> int:
     """
-    Scan through all occupied periods plus gaps to find the max run.
+    Count the maximum number of consecutive periods
+    in which count >= required anywhere in the history.
     """
-    if not period_counts:
-        return 0
+    # get all the period‐indices where we met the requirement
+    good_periods = sorted(idx for idx, cnt in period_counts.items() if cnt >= required)
 
-    # get all period indices, sort them, then walk
-    all_periods = sorted(period_counts.keys())
-    # but also fill in gaps up to “now” so runs stop at missing periods
-    # build a complete list from earliest to now, stepping period by period
-    start = all_periods[0]
-    end = period_index(datetime.now(), period_type)
+    longest = 0
+    current = 0
+    prev_idx = None
 
-    seq = []
-    idx = start
-    while True:
-        seq.append(idx)
-        if idx == end:
-            break
-        idx = previous_period(idx, period_type)
-    # seq is descending; reverse to ascending
-    seq.reverse()
-
-    max_run = run = 0
-    for idx in seq:
-        if period_counts.get(idx, 0) >= required:
-            run += 1
-            if run > max_run:
-                max_run = run
+    for idx in good_periods:
+        # if this period is exactly the next after prev_idx, extend the run
+        if prev_idx is not None and idx == next_period(prev_idx, period_type):
+            current += 1
         else:
-            run = 0
-    return max_run
+            # otherwise start a new run here
+            current = 1
+        longest = max(longest, current)
+        prev_idx = idx
+
+    return longest
+
 
 def period_index(ts: datetime, period_type: int) -> tuple:
     """
@@ -175,6 +123,33 @@ def previous_period(idx: tuple, period_type: int) -> tuple:
             return (year, month - 1)
     else:
         raise ValueError("Unknown period type")
+
+def next_period(idx: tuple, period_type: int) -> tuple:
+    """
+    Given a period index, return the next period’s index.
+    """
+    if period_type == PERIOD_DAILY:
+        year, month, day = idx
+        dt = datetime(year, month, day) + timedelta(days=1)
+        return (dt.year, dt.month, dt.day)
+
+    elif period_type == PERIOD_WEEKLY:
+        year, week = idx
+        # find the Monday of this ISO week
+        dt = datetime.strptime(f'{year}-W{week}-1', "%G-W%V-%u")
+        dt_next = dt + timedelta(weeks=1)
+        return (dt_next.isocalendar()[0], dt_next.isocalendar()[1])
+
+    elif period_type == PERIOD_MONTHLY:
+        year, month = idx
+        if month == 12:
+            return (year + 1, 1)
+        else:
+            return (year, month + 1)
+
+    else:
+        raise ValueError("Unknown period type")
+
 
 def get_period_counts(timestamps: list, period_type: int) -> dict:
     """
