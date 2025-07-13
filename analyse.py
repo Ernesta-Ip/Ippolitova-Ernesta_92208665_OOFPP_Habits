@@ -2,13 +2,14 @@ from collections import Counter as _Counter
 from datetime import datetime, timedelta
 from db import get_counter_data, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
 
+# TODO: why this module repeats the definitions, done within the counter module?
 UNIT_NAMES = {
     PERIOD_DAILY: "daily",
     PERIOD_WEEKLY: "weekly",
     PERIOD_MONTHLY: "monthly"
 }
 
-def get_period_type_for(name: str, db) -> int:
+def get_period_type_for(db, name: str) -> int:
     """
     Look up the period_type (1,2,3) for a given habit name.
     Raises ValueError if the habit doesn't exist.
@@ -26,19 +27,16 @@ def count_events(db, counter_id=None):
     data = get_counter_data(db, counter_id)
     return len(data)
 
-def list_all(db):
-    cur = db.cursor()
-    cur.execute("SELECT name FROM counter")
-    return [row[0] for row in cur.fetchall()]
-
 def group_by_period_type (db):
     cur = db.cursor()
-    cur.execute("SELECT period_type, name FROM counter")
-    rows = cur.fetchall()
-    groups = {}
-    for period_type, name in rows:
-        groups.setdefault(period_type, []).append(name)
-    return { UNIT_NAMES.get(k, "?"): v for k,v in groups.items() }
+    # cur.execute("SELECT period_type, name FROM counter")
+    cur.execute("SELECT period_type, GROUP_CONCAT(name) GroupedNames FROM counter GROUP BY period_type")
+    return cur.fetchall()
+    # rows = cur.fetchall()
+    # groups = {}
+    # for period_type, name in rows:
+    #     groups.setdefault(period_type, []).append(name)
+    # return { UNIT_NAMES.get(k, "?"): v for k,v in groups.items() }
 
 def current_streak(period_counts: dict, period_type: int, required: int) -> int:
     """
@@ -158,7 +156,7 @@ def get_period_counts(timestamps: list, period_type: int) -> dict:
     idx = [period_index(ts, period_type) for ts in timestamps]
     return dict(_Counter(idx))
 
-def get_period_count_for(name: str, db) -> int:
+def get_period_count_for(db, name: str) -> int:
     """
     Fetches from the DB how many times per period the habit 'name' is required.
     Raises ValueError if the habit isn't found.

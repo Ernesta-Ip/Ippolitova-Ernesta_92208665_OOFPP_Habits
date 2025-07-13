@@ -5,6 +5,19 @@ PERIOD_DAILY = 1
 PERIOD_WEEKLY = 2
 PERIOD_MONTHLY = 3
 
+def get_habit_names(db):
+    cursor = db.cursor()
+    cursor.execute("SELECT name FROM counter")
+    rows = cursor.fetchall()
+    return [row[0] for row in rows]
+
+def exist(db, name):
+    cursor = db.cursor()
+    cursor.execute("SELECT 1 FROM counter WHERE name = ?", (name,))
+    if cursor.fetchone():
+        return True
+    return False
+
 def get_db(name="main.db"):
     db = sqlite3.connect(name)
     create_tables(db)

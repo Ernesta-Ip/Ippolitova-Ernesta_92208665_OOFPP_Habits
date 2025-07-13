@@ -31,7 +31,7 @@ Start
 ```
 python main.py
 ```
-and follow the instructions on the screen
+then use CLI to interact with the app
 
 ## Tests 
 ```

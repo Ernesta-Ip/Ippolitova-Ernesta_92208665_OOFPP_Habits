@@ -1,7 +1,11 @@
 from db import add_counter, increment_counter, delete_counter, delete_tracker_entries, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
+from datetime import datetime
 
 class Counter:
 
+    # TODO: there is an enum type in Python: https://docs.python.org/3/library/enum.html
+    #   which module has to define the very value of the period? Counter module? then, why the db module contains any notion
+    #   of periods with values? The DB module? then, the Counter module shouldn't redefine them via "TYPE_NAMES".
     TYPE_NAMES = {
         PERIOD_DAILY: "daily",
         PERIOD_WEEKLY: "weekly",
@@ -22,7 +26,9 @@ class Counter:
     def store(self, db):
         add_counter(db, self.name, self.description, self.period_type, self.period_count)
 
-def add_event(name, db, date: str = None):
+def add_event(name, db, date: datetime = None):
+    # .strptime(ts_str, "%Y-%m-%d %H:%M:%S")
+    # date.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
     increment_counter(db, name, date)
 
 def delete_event(db, name: str):
