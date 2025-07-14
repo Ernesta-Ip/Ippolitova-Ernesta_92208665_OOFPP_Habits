@@ -3,15 +3,6 @@ from datetime import datetime
 
 class Counter:
 
-    # TODO: there is an enum type in Python: https://docs.python.org/3/library/enum.html
-    #   which module has to define the very value of the period? Counter module? then, why the db module contains any notion
-    #   of periods with values? The DB module? then, the Counter module shouldn't redefine them via "TYPE_NAMES".
-    # TYPE_NAMES = {
-    #     PERIOD_DAILY: "daily",
-    #     PERIOD_WEEKLY: "weekly",
-    #     PERIOD_MONTHLY: "monthly"
-    # }
-
     def __init__(self, name: str, description: str, period_type: UnitNames, period_count: int):
         self.name = name
         self.description = description

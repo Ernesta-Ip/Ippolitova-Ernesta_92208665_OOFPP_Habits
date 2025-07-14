@@ -19,11 +19,6 @@ def cli():
             print("Bye!")
             break
 
-        # TODO: by defining four choices: Create, Delete, Complete, Analyse, the classical CRUD access to the database
-        #   is used: Create, Read, Update, Delete. https://de.wikipedia.org/wiki/CRUD. This can be used to abstract/refactor
-        #   the four blocks into their functions. Moreover, your db module already implements functions, using the cursor,
-        #   this is a good occasion to not use this sort of low level functions within the main. This is, because it is
-        #   a bad behavior to expose the underlying data source to the user directly, for security reasons.
         elif choice == "Create":
                 name = questionary.text("What is the name of the habit?").ask()
 

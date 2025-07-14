@@ -2,13 +2,6 @@ from collections import Counter as _Counter
 from datetime import datetime, timedelta
 from db import get_counter_data, UnitNames
 
-# TODO: why this module repeats the definitions, done within the counter module?
-# UNIT_NAMES = {
-#     PERIOD_DAILY: "daily",
-#     PERIOD_WEEKLY: "weekly",
-#     PERIOD_MONTHLY: "monthly"
-# }
-
 def get_period_type_for(db, name: str) -> UnitNames:
     """
     Look up the period_type (1,2,3) for a given habit name.
