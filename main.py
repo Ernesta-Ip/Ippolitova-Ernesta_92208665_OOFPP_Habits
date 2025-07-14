@@ -3,6 +3,7 @@ import db as database
 from counter import Counter, add_event, delete_event
 import analyse
 from datetime import datetime
+from db import UnitNames
 
 def cli():
     db = database.get_db()
@@ -35,15 +36,15 @@ def cli():
                 period_choice = questionary.select(
                         "Select periodicity type",
                         choices=[
-                            questionary.Choice(Counter.TYPE_NAMES[database.PERIOD_DAILY], value=analyse.PERIOD_DAILY),
-                            questionary.Choice(Counter.TYPE_NAMES[database.PERIOD_WEEKLY], value=analyse.PERIOD_WEEKLY),
-                            questionary.Choice(Counter.TYPE_NAMES[database.PERIOD_MONTHLY], value=analyse.PERIOD_MONTHLY),
+                            questionary.Choice(UnitNames.PERIOD_DAILY.label, value=UnitNames.PERIOD_DAILY),
+                            questionary.Choice(UnitNames.PERIOD_WEEKLY.label, value=UnitNames.PERIOD_WEEKLY),
+                            questionary.Choice(UnitNames.PERIOD_MONTHLY.label, value=UnitNames.PERIOD_MONTHLY),
                         ]
-                    ).ask()
+                ).ask()
 
                 unit = (
-                        "day" if period_choice == analyse.PERIOD_DAILY
-                        else "week" if period_choice == analyse.PERIOD_WEEKLY
+                        "day" if period_choice is UnitNames.PERIOD_DAILY
+                        else "week" if period_choice is UnitNames.PERIOD_WEEKLY
                         else "month"
                 )
 
@@ -152,10 +153,11 @@ def cli():
             elif analysis == "group_by_period_type":
                 groups = analyse.group_by_period_type(db)
                 print(" ➤ Habits grouped by periodicity:")
-                for entry in groups:
-                    print(Counter.TYPE_NAMES[entry[0]])
-                    for name in entry[1].split(","):
-                        print(f"    {name}")
+                for period_enum, comma_names in groups:
+                    print(f" • {UnitNames(period_enum).label}:")
+                    for n in comma_names.split(","):
+                        print(f"    – {n}")
+
 
             elif analysis == "streak":
                 which = questionary.select("Current or longest streak?", choices=["current", "longest"]).ask()
@@ -190,7 +192,7 @@ def cli():
 
                     #calculate the current streak
                     length = analyse.current_streak(period_counts, period_type, required)
-                    unit = analyse.UNIT_NAMES.get(period_type, "period")
+                    unit = period_type.label
                     unit_label = unit if length == 1 else unit + "s"
 
                     print(

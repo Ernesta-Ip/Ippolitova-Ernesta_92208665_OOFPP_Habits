@@ -1,15 +1,15 @@
 from collections import Counter as _Counter
 from datetime import datetime, timedelta
-from db import get_counter_data, PERIOD_DAILY, PERIOD_WEEKLY, PERIOD_MONTHLY
+from db import get_counter_data, UnitNames
 
 # TODO: why this module repeats the definitions, done within the counter module?
-UNIT_NAMES = {
-    PERIOD_DAILY: "daily",
-    PERIOD_WEEKLY: "weekly",
-    PERIOD_MONTHLY: "monthly"
-}
+# UNIT_NAMES = {
+#     PERIOD_DAILY: "daily",
+#     PERIOD_WEEKLY: "weekly",
+#     PERIOD_MONTHLY: "monthly"
+# }
 
-def get_period_type_for(db, name: str) -> int:
+def get_period_type_for(db, name: str) -> UnitNames:
     """
     Look up the period_type (1,2,3) for a given habit name.
     Raises ValueError if the habit doesn't exist.
@@ -19,7 +19,7 @@ def get_period_type_for(db, name: str) -> int:
     row = cur.fetchone()
     if not row:
         raise ValueError(f"No habit named '{name}'")
-    return row[0]
+    return UnitNames(row[0])
 
 def count_events(db, counter_id=None):
     if not counter_id:
@@ -29,14 +29,8 @@ def count_events(db, counter_id=None):
 
 def group_by_period_type (db):
     cur = db.cursor()
-    # cur.execute("SELECT period_type, name FROM counter")
     cur.execute("SELECT period_type, GROUP_CONCAT(name) GroupedNames FROM counter GROUP BY period_type")
     return cur.fetchall()
-    # rows = cur.fetchall()
-    # groups = {}
-    # for period_type, name in rows:
-    #     groups.setdefault(period_type, []).append(name)
-    # return { UNIT_NAMES.get(k, "?"): v for k,v in groups.items() }
 
 def current_streak(period_counts: dict, period_type: int, required: int) -> int:
     """
@@ -46,13 +40,12 @@ def current_streak(period_counts: dict, period_type: int, required: int) -> int:
     streak = 0
     now_idx = period_index(datetime.now(), period_type)
     idx = now_idx
-
     while period_counts.get(idx, 0) >= required:
         streak += 1
         idx = previous_period(idx, period_type)
     return streak
 
-def longest_streak(period_counts: dict, period_type: int, required: int) -> int:
+def longest_streak(period_counts: dict, period_type: UnitNames, required: int) -> int:
     """
     Count the maximum number of consecutive periods
     in which count >= required anywhere in the history.
@@ -73,35 +66,34 @@ def longest_streak(period_counts: dict, period_type: int, required: int) -> int:
             current = 1
         longest = max(longest, current)
         prev_idx = idx
-
     return longest
 
 
-def period_index(ts: datetime, period_type: int) -> tuple:
+def period_index(ts: datetime, period_type: UnitNames) -> tuple:
     """
     Maps a timestamp to a (year, period) tuple:
     - daily → (YYYY, MM, DD)
     - weekly → (YYYY, ISO_week_number)
     - monthly → (YYYY, MM)
     """
-    if period_type == PERIOD_DAILY:
+    if period_type is UnitNames.PERIOD_DAILY:
         return ts.year, ts.month, ts.day
-    elif period_type == PERIOD_WEEKLY:
+    elif period_type is UnitNames.PERIOD_WEEKLY:
         # iso calendar()[1] gives ISO week number
         return ts.isocalendar()[0], ts.isocalendar()[1]
-    elif period_type == PERIOD_MONTHLY:
+    elif period_type is UnitNames.PERIOD_MONTHLY:
         return ts.year, ts.month
     else:
         raise ValueError("Unknown period type")
 
-def previous_period(idx: tuple, period_type: int) -> tuple:
+def previous_period(idx: tuple, period_type: UnitNames) -> tuple:
     """
     Given a period index, return the prior period’s index.
     """
-    if period_type == PERIOD_DAILY:
+    if period_type is UnitNames.PERIOD_DAILY:
         dt = datetime(idx[0], idx[1], idx[2]) - timedelta(days=1)
         return dt.year, dt.month, dt.day
-    elif period_type == PERIOD_WEEKLY:
+    elif period_type is UnitNames.PERIOD_WEEKLY:
         # Convert back to a date, subtract 1 week
         # Use Monday of that ISO week:
         year, week = idx
@@ -113,7 +105,7 @@ def previous_period(idx: tuple, period_type: int) -> tuple:
             week -= 1
         dt = datetime.strptime(f'{year}-W{week}-1', "%G-W%V-%u")
         return dt.isocalendar()[0], dt.isocalendar()[1]
-    elif period_type == PERIOD_MONTHLY:
+    elif period_type is UnitNames.PERIOD_MONTHLY:
         year, month = idx
         if month == 1:
             return year - 1, 12
@@ -122,23 +114,23 @@ def previous_period(idx: tuple, period_type: int) -> tuple:
     else:
         raise ValueError("Unknown period type")
 
-def next_period(idx: tuple, period_type: int) -> tuple:
+def next_period(idx: tuple, period_type: UnitNames) -> tuple:
     """
     Given a period index, return the next period’s index.
     """
-    if period_type == PERIOD_DAILY:
+    if period_type is UnitNames.PERIOD_DAILY:
         year, month, day = idx
         dt = datetime(year, month, day) + timedelta(days=1)
         return dt.year, dt.month, dt.day
 
-    elif period_type == PERIOD_WEEKLY:
+    elif period_type is UnitNames.PERIOD_WEEKLY:
         year, week = idx
         # find the Monday of this ISO week
         dt = datetime.strptime(f'{year}-W{week}-1', "%G-W%V-%u")
         dt_next = dt + timedelta(weeks=1)
         return dt_next.isocalendar()[0], dt_next.isocalendar()[1]
 
-    elif period_type == PERIOD_MONTHLY:
+    elif period_type is UnitNames.PERIOD_MONTHLY:
         year, month = idx
         if month == 12:
             return year + 1, 1
@@ -148,7 +140,7 @@ def next_period(idx: tuple, period_type: int) -> tuple:
     else:
         raise ValueError("Unknown period type")
 
-def get_period_counts(timestamps: list, period_type: int) -> dict:
+def get_period_counts(timestamps: list, period_type: UnitNames) -> dict:
     """
     timestamps: list of datetime objects
     returns: { period_index: count_of_events_in_that_period }

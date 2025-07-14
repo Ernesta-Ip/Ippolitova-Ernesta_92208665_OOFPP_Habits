@@ -1,9 +1,19 @@
 import sqlite3
 from datetime import datetime
+from enum import IntEnum
 
-PERIOD_DAILY = 1
-PERIOD_WEEKLY = 2
-PERIOD_MONTHLY = 3
+class UnitNames(IntEnum):
+    PERIOD_DAILY   = 1
+    PERIOD_WEEKLY  = 2
+    PERIOD_MONTHLY = 3
+
+    @property
+    def label(self) -> str:
+        return self.name.split('_', 1)[1].lower()
+
+PERIOD_DAILY = UnitNames.PERIOD_DAILY
+PERIOD_WEEKLY = UnitNames.PERIOD_WEEKLY
+PERIOD_MONTHLY = UnitNames.PERIOD_MONTHLY
 
 def get_habit_names(db):
     cursor = db.cursor()
@@ -20,6 +30,7 @@ def exist(db, name):
 
 def get_db(name="main.db"):
     db = sqlite3.connect(name)
+    db.execute("PRAGMA foreign_keys = ON;")
     create_tables(db)
     return db
 
@@ -51,11 +62,11 @@ def create_tables(db):
     db.commit()
 
 #Addition of new habit
-def add_counter(db, name, description, period_type, period_count):
+def add_counter(db, name, description, period_type: UnitNames, period_count):
     cur = db.cursor()
     cur.execute(
         "INSERT INTO counter (name, description, period_type, period_count) VALUES (?, ?, ?, ?)",
-        (name, description, period_type, period_count)
+        (name, description, int(period_type), period_count)
     )
     db.commit()
 
@@ -92,10 +103,11 @@ def delete_tracker_entries(db, habit_name: str):
     """
     Remove all rows from `tracker` for this habit.
     """
-    cursor = db.cursor()
-    cursor.execute(
-        "DELETE FROM tracker WHERE counterName = ?",
-        (habit_name,)
-    )
+    cur = db.cursor()
+    cur.execute("""
+        DELETE FROM tracker
+        WHERE counter_id = (
+            SELECT id FROM counter WHERE name = ?
+        )
+    """, (habit_name,))
     db.commit()
-
