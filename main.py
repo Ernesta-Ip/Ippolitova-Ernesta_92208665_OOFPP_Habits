@@ -14,6 +14,7 @@ def cli():
             "What would you like to do?",
             choices=["Create", "Delete", "Complete the Task", "Analyse", "Exit"]
         ).ask()
+        if not choice: continue
 
         if choice == "Exit":
             print("Bye!")
@@ -21,12 +22,20 @@ def cli():
 
         elif choice == "Create":
                 name = questionary.text("What is the name of the habit?").ask()
+                # TODO: https://questionary.readthedocs.io/en/stable/pages/advanced.html#safe
+                #   according to the documentation of questionary, if I press Ctrl-C, None is returned by ask()
+                #   this case should be handled for every ask() call. - DONE, BUT NOT SURE IF CORRECTLY
 
-                if database.exist(db, name):
+                if not name:
+                    continue
+
+                if database.exist(db, database.find_counter_by_name(db, name)):
                     print(f"Habit '{name}' already exists, please choose a different name.\n")
                     continue
 
                 desc = questionary.text("What is the description of the habit?").ask()
+                if not desc:
+                    continue
 
                 period_choice = questionary.select(
                         "Select periodicity type",
@@ -37,17 +46,23 @@ def cli():
                         ]
                 ).ask()
 
+                if not period_choice:
+                    continue
+
                 unit = (
                         "day" if period_choice is UnitNames.PERIOD_DAILY
                         else "week" if period_choice is UnitNames.PERIOD_WEEKLY
                         else "month"
                 )
 
-                period_count = int(questionary.text(
+                period_count = questionary.text(
                         f"How many times per {unit}?"
-                ).ask())
+                ).ask()
 
-                counter = Counter(name, desc, period_choice, period_count)
+                if not period_count: continue
+
+                counter = Counter(name, desc, period_choice, int(period_count))
+
                 counter.store(db)
 
                 print(f" Habit '{name}' created: {period_count}× per {unit}.")
@@ -63,11 +78,13 @@ def cli():
                 "Which habit do you want to delete?",
                 choices=habit_names
             ).ask()
+            if not name: continue
 
             # ask for confirmation
             confirm = questionary.confirm(
                 f"Are you sure you want to delete '{name}' and all its records?"
             ).ask()
+            if not confirm: continue
 
             if confirm:
                 delete_event(db, name)
@@ -86,6 +103,7 @@ def cli():
                 "Which habit did you complete?",
                 choices=habit_names
             ).ask()
+            if not name: continue
 
             #setting timestamp manually
 
@@ -95,12 +113,14 @@ def cli():
             ).ask()
 
             completed_at = datetime.now()
+
             if set_timestamp_manually:
                 while True:
                     ts_str = questionary.text(
                         "Enter timestamp (YYYY-MM-DD HH:MM:SS):",
                         default=completed_at.strftime("%Y-%m-%d %H:%M:%S")
                     ).ask()
+                    if not ts_str: continue
                     try:
                         completed_at = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
                     except ValueError:
@@ -123,6 +143,7 @@ def cli():
                         questionary.Choice("Streak length", "streak"),
                         ]
                 ).ask()
+            if not analysis: continue
 
             if analysis == "count":
                 # Select the habit to be counted
@@ -136,7 +157,9 @@ def cli():
                     "Which habit do you want to count tasks for?",
                     choices=habit_names
                 ).ask()
-                cnt = analyse.count_events(db, counter_id=name)
+                if not name: continue
+
+                cnt = analyse.count_events(db, name)
                 print(f" ➤ '{name}' has been incremented {cnt} times.")
 
             elif analysis == "list_all":
@@ -156,37 +179,23 @@ def cli():
 
             elif analysis == "streak":
                 which = questionary.select("Current or longest streak?", choices=["current", "longest"]).ask()
+                if not which: continue
 
-                # TODO: while in former cases, your analysis_counters yields all the results, which could be printed,
-                #   in the case of the current "streak" analysis you need more functions to get e.g.,
-                #   period_type, unit, unit_label. Why is that?
+                # fetch all habit names
+                habit_names = database.get_habit_names(db)
+                if not habit_names:
+                    print("You don't have any habits yet. Please create one.\n")
+                    continue
 
                 if which == "current":
-                    # Select the habit to count the current streak
-                    habit_names = database.get_habit_names(db)
-
-                    if not habit_names:
-                        print("You don't have any habits yet. Please create one.\n")
-                        continue
-
                     name = questionary.select(
                         "Which habit do you want the streak for?",
                         choices=habit_names
                     ).ask()
+                    if not name: continue
 
-                    #settings for the habit
-                    period_type = analyse.get_period_type_for(db, name)
-                    required = analyse.get_period_count_for(db, name)
+                    length, period_type = analyse.streak_analyse(db, name)
 
-                    #setting the dictionary
-                    period_counts = {}
-                    for _, ts_str in analyse.get_counter_data(db, name):
-                       ts = datetime.fromisoformat(ts_str)
-                       idx = analyse.period_index(ts, period_type)
-                       period_counts[idx] = period_counts.get(idx, 0) + 1
-
-                    #calculate the current streak
-                    length = analyse.current_streak(period_counts, period_type, required)
                     unit = period_type.label
                     unit_label = unit if length == 1 else unit + "s"
 
@@ -195,41 +204,20 @@ def cli():
                         f"{length} {unit_label} for '{name}'.\n"
                     )
 
-                # TODO: while in former cases, your analysis_counters yields all the results, which could be printed,
-                #   in the case of the longest "streak" analysis you need to call this function even twice, not to
-                #   mention, that half of the evaluation happens outside of the function. Why is that?
-
                 if which == "longest":
-                    # fetch all habit names
-                    habit_names = database.get_habit_names(db)
-
-                    if not habit_names:
-                        print("You don't have any habits yet. Please create one.\n")
-                        continue
-
                     max_length = 0
                     best_habit = None
                     best_unit = "period"
 
                     # for each habit, compute its longest streak
                     for name in habit_names:
-                        period_type = analyse.get_period_type_for(db, name)
-                        required = analyse.get_period_count_for(db, name)
-
-                        # build count-by-period for this habit
-                        period_counts = {}
-                        for _, ts_str in analyse.get_counter_data(db, name):
-                            ts = datetime.fromisoformat(ts_str)
-                            idx = analyse.period_index(ts, period_type)
-                            period_counts[idx] = period_counts.get(idx, 0) + 1
-
-                        length = analyse.longest_streak(period_counts, period_type, required)
+                        length, period_type = analyse.streak_analyse(db, name)
 
                         # track the overall best
                         if length > max_length:
                             max_length = length
                             best_habit = name
-                            best_unit = analyse.UNIT_NAMES.get(period_type, "period")
+                            best_unit = period_type.label
 
                     if max_length == 0:
                         print("➤ You haven't met the requirement for any streak yet.\n")
