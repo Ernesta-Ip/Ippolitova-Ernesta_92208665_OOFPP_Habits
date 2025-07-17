@@ -17,6 +17,9 @@ PERIOD_WEEKLY = UnitNames.PERIOD_WEEKLY
 PERIOD_MONTHLY = UnitNames.PERIOD_MONTHLY
 
 def get_habit_names(db):
+    """
+    Fetches the names of all the habits in the database.
+    """
     cursor = db.cursor()
     cursor.execute("SELECT name FROM counter")
     rows = cursor.fetchall()
@@ -25,6 +28,9 @@ def get_habit_names(db):
     return [row[0] for row in rows]
 
 def exist(db, _id):
+    """
+    Checks if the habit exists in the database.
+    """
     cursor = db.cursor()
     cursor.execute("SELECT 1 FROM counter WHERE id = ?", (_id,))
     if cursor.fetchone():
@@ -39,8 +45,11 @@ def get_db(name="main.db"):
     create_tables(db)
     return db
 
-# Initial creation of tables counter and tracker
 def create_tables(db):
+    """
+    Initial creation of tables counter and tracker.
+    Makes commit to the database after the creation.
+    """
     cur = db.cursor()
 
     # ——— Table counter ———
@@ -66,8 +75,17 @@ def create_tables(db):
 
     db.commit()
 
-#Addition of new habit
+
 def add_counter(db, name, description, period_type: UnitNames, period_count):
+    """
+    Add habit to the database and makes commit to the database
+    :param db: database connection
+    :param name: name of the habit
+    :param description: text description of the habit
+    :param period_type: enum value (day, week, month)
+    :param period_count: int number of times per period type
+    :return: ID of the inserted row
+    """
     cur = db.cursor()
     cur.execute(
         "INSERT INTO counter (name, description, period_type, period_count) VALUES (?, ?, ?, ?)",
@@ -77,11 +95,17 @@ def add_counter(db, name, description, period_type: UnitNames, period_count):
     return cur.lastrowid
 
 def group_by_period_type(db):
+    """
+    Lists habits grouped by period type.
+    """
     cur = db.cursor()
     cur.execute("SELECT period_type, GROUP_CONCAT(name) GroupedNames FROM counter GROUP BY period_type")
     return cur.fetchall()
 
 def get_period_count(db, _id):
+    """
+    Selects the period count for the given habit by ID.
+    """
     cur = db.cursor()
     cur.execute("SELECT period_count FROM counter WHERE id = ?", (_id,))
     rows = cur.fetchone()
@@ -90,6 +114,9 @@ def get_period_count(db, _id):
     return None
 
 def get_period_type(db, _id):
+    """
+    Selects the period type for the given habit by ID.
+    """
     cur = db.cursor()
     cur.execute("SELECT period_type FROM counter WHERE id = ?", (_id,))
     rows = cur.fetchone()
@@ -98,6 +125,10 @@ def get_period_type(db, _id):
     return None
 
 def find_counter_by_name(db, name):
+    """
+    Fetches the ID of the habit with the given name.
+    :return: the value of ID column for the first matching row, or None if no such habit exists.
+    """
     cur = db.cursor()
     cur.execute("SELECT id FROM counter WHERE name = ?", (name,))
     rows = cur.fetchone()
@@ -105,9 +136,10 @@ def find_counter_by_name(db, name):
         return rows[0]
     return None
 
-#Addition of event of the exact habit
 def increment_counter(db, counter_id, event_time: DateTime = None):
-
+    """
+    Inserts the event with the timestamp into the tracker table.
+    """
     if not event_time:
         event_time = datetime.now()
 
@@ -120,13 +152,14 @@ def increment_counter(db, counter_id, event_time: DateTime = None):
     )
     db.commit()
 
-#Fetching data on the events of the habit
 def get_counter_data(db, counter_id : int):
+    """
+    Fetches the events of the habit with the given ID.
+    """
     cur = db.cursor()
     cur.execute("SELECT counter_id, timestamp FROM tracker WHERE counter_id = ?", (counter_id,))
     return cur.fetchall()
 
-#Deletion of habit
 def delete_counter(db, _id: int):
     """
     Remove the habit itself from `counter`.

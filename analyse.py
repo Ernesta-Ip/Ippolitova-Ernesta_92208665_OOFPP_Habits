@@ -5,6 +5,8 @@ def get_period_type_for(db, name: str) -> database.UnitNames:
     """
     Look up the period_type (1,2,3) for a given habit name.
     Raises ValueError if the habit doesn't exist.
+
+    :return: UnitNames: the enum indicating the period granularity (daily, weekly, monthly)
     """
     _id = database.find_counter_by_name(db, name)
     row = database.get_period_type(db, _id)
@@ -13,17 +15,28 @@ def get_period_type_for(db, name: str) -> database.UnitNames:
     return database.UnitNames(row)
 
 def count_events(db, name: str):
+    """
+    Counts the number of events for a given habit name
+    :return: length: int: the number of events for a given habit name
+    """
     _id = database.find_counter_by_name(db, name)
     data = database.get_counter_data(db, _id)
     return len(data)
 
 def group_by_period_type(db):
+    """
+    Group the data by period type.
+    """
     return database.group_by_period_type(db)
 
 def current_streak(period_counts: dict, period_type: database.UnitNames, required: int) -> int:
     """
     Starting from the current period, count how many
-    previous periods have count >= required.
+    previous periods have count of events >= required (set by user for the exact habit).
+    :param period_counts: dict: a dictionary of period index to count
+    :param period_type: UnitNames: the enum indicating the period granularity (daily, weekly, monthly)
+    :param required: int: the number of times per period the habit is required
+    :return: int: streak - the number of consecutive periods in which count >= required.
     """
     streak = 0
     now_idx = period_index(datetime.now(), period_type)
@@ -37,6 +50,10 @@ def longest_streak(period_counts: dict, period_type: database.UnitNames, require
     """
     Count the maximum number of consecutive periods
     in which count >= required anywhere in the history.
+    :param period_counts: dict: a dictionary of period index to count
+    :param period_type: UnitNames: the enum indicating the period granularity (daily, weekly, monthly)
+    :param required: int: the number of times per period the habit is required
+    :return: int: longest - the longest streak found in the history.
     """
     # get all the period‐indices where we met the requirement
     good_periods = sorted(idx for idx, cnt in period_counts.items() if cnt >= required)
@@ -57,6 +74,16 @@ def longest_streak(period_counts: dict, period_type: database.UnitNames, require
     return longest
 
 def streak_analyse(db, name: str):
+    """
+    Calculate the longest streak of meeting a counter’s periodic requirement.
+
+    Fetches the period granularity and required count for the given habit,
+    then aggregates the counter’s timestamps into period-indexed counts. After that func
+    computes the longest consecutive sequence of periods during which the count
+    met or exceeded the required threshold.
+
+    :return: tuple: length (number of consecutive periods), period_type (daily, weekly, monthly)
+    """
     period_type = get_period_type_for(db, name)
     required = get_period_count_for(db, name)
 
@@ -91,6 +118,9 @@ def period_index(ts: datetime, period_type: database.UnitNames) -> tuple:
 def previous_period(idx: tuple, period_type: database.UnitNames) -> tuple:
     """
     Given a period index, return the prior period’s index.
+    :param idx: tuple: a period index (year, period unit)
+    :param period_type: UnitNames: the enum indicating the period granularity (daily, weekly, monthly)
+    ":return: tuple: the prior period index (year, period unit)
     """
     if period_type is database.UnitNames.PERIOD_DAILY:
         dt = datetime(idx[0], idx[1], idx[2]) - timedelta(days=1)
@@ -119,6 +149,9 @@ def previous_period(idx: tuple, period_type: database.UnitNames) -> tuple:
 def next_period(idx: tuple, period_type: database.UnitNames) -> tuple:
     """
     Given a period index, return the next period’s index.
+    :param idx: tuple: a period index (year, period unit)
+    :param period_type: UnitNames: the enum indicating the period granularity (daily, weekly, monthly)
+    :return: tuple: the next period index (year, period unit)
     """
     if period_type is database.UnitNames.PERIOD_DAILY:
         year, month, day = idx
@@ -144,8 +177,9 @@ def next_period(idx: tuple, period_type: database.UnitNames) -> tuple:
 
 def get_period_count_for(db, name: str) -> int:
     """
-    Fetches from the DB how many times per period the habit 'name' is required.
+    Fetches from the DB how many times per period the habit with a given name is required.
     Raises ValueError if the habit isn't found.
+    :return: int: the number of times per period the habit is required.
     """
     _id = database.find_counter_by_name(db, name)
     row = database.get_period_count(db, _id)

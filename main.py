@@ -6,6 +6,19 @@ from datetime import datetime
 from db import UnitNames
 
 def cli():
+    """Launch the interactive command-line interface for the habit tracker.
+
+    Presents a menu of actions—Create, Delete, Complete the Task, Analyse, and Exit—
+    and drives the full workflow for managing habits:
+      - Create a new habit (name, description, periodicity, target count)
+      - Delete an existing habit (with confirmation)
+      - Record a completion event (with optional timestamp override)
+      - Perform analyses (total count, list all, group by periodicity, current and longest streaks)
+      - Exit the application loop
+
+    This function will block until the user selects “Exit.”
+    """
+
     db = database.get_db()
 
     #Actions with habits
@@ -22,10 +35,6 @@ def cli():
 
         elif choice == "Create":
                 name = questionary.text("What is the name of the habit?").ask()
-                # TODO: https://questionary.readthedocs.io/en/stable/pages/advanced.html#safe
-                #   according to the documentation of questionary, if I press Ctrl-C, None is returned by ask()
-                #   this case should be handled for every ask() call. - DONE, BUT NOT SURE IF CORRECTLY
-
                 if not name:
                     continue
 
