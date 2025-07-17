@@ -72,7 +72,7 @@ def cli():
 
                 counter = Counter(name, desc, period_choice, int(period_count))
 
-                counter.store(db)
+                database.add_counter(db, counter.name, counter.description, counter.period_type, counter.period_count)
 
                 print(f" Habit '{name}' created: {period_count}× per {unit}.")
 

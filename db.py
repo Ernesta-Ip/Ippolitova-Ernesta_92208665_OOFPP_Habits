@@ -138,7 +138,7 @@ def find_counter_by_name(db, name):
 
 def increment_counter(db, counter_id, event_time: DateTime = None):
     """
-    Inserts the event with the timestamp into the tracker table.
+    Inserts the event entry with the timestamp into the tracker table.
     """
     if not event_time:
         event_time = datetime.now()

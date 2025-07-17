@@ -26,31 +26,31 @@ class Counter:
         """
         return f"{self.name}: {self.count} — {self.period_count}× per {self.period_type.label}"
 
-    def store(self, db):
-        """Persist the counter to the database and output the insertion result.
-
-            Calls the `add_counter` helper to insert the counter record
-            in the given database, using this counter’s attributes.
-
-            :param db: A database connection or session object to use for the insert.
-            :param name (str): The unique name of the counter (from `self.name`).
-            :param description (str): A human-readable description of what the counter tracks (from `self.description`).
-            :param enum indicating the period granularity (from `self.period_type`).
-            :param period_count (int): The frequency of events per period (from `self.period_count`).
-            :return: None: Prints the result of the database operation (`lastrow`) to stdout.
-
-            """
-        lastrow = add_counter(db, self.name, self.description, self.period_type, self.period_count)
-        print(lastrow)
+    # def store(self, db):
+    #     """Persist the counter to the database and output the insertion result.
+    #
+    #         Calls the `add_counter` helper to insert the counter record
+    #         in the given database, using this counter’s attributes.
+    #
+    #         :param db: A database connection or session object to use for the insert.
+    #         :param name (str): The unique name of the counter (from `self.name`).
+    #         :param description (str): A human-readable description of what the counter tracks (from `self.description`).
+    #         :param enum indicating the period granularity (from `self.period_type`).
+    #         :param period_count (int): The frequency of events per period (from `self.period_count`).
+    #         :return: None: Prints the result of the database operation (`lastrow`) to stdout.
+    #
+    #         """
+    #     lastrow = add_counter(db, self.name, self.description, self.period_type, self.period_count)
+    #     print(lastrow)
 
 def add_event(habit_name: str, db, date: datetime = None):
-    '''
-    Add event to habit (check-off the task)
+    """
+    Add event to habit (check-off the task) by given name, raises increment_counter function.
     :param habit_name: name of the habit in the database
     :param db: a database connection
     :param date: a date of checking-off in datetime format
     :return: None: increments the counter of events
-    '''
+    """
     row = find_counter_by_name(db, habit_name)
     if row is None:
         raise ValueError(f"No such habit: {habit_name!r}")
@@ -62,5 +62,4 @@ def delete_event(db, name: str):
     Delete a habit and all its records.
     """
     _id = find_counter_by_name(db, name)
-    print(_id)
     delete_counter(db, _id)
