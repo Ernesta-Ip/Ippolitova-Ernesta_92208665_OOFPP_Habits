@@ -4,7 +4,8 @@ from datetime import datetime
 class Counter:
 
     def __init__(self, name: str, description: str, period_type: UnitNames, period_count: int):
-        """Counter class for counting habits.
+        """
+        Counter class for counting habits.
             :param name: name of the habit
             :param description: description of the habit
             :param period_type: type of periodicity (daily, weekly, monthly)
