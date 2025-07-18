@@ -29,23 +29,6 @@ def group_by_period_type(db):
     """
     return database.group_by_period_type(db)
 
-def current_streak(period_counts: dict, period_type: database.UnitNames, required: int) -> int:
-    """
-    Starting from the current period, count how many
-    previous periods have count of events >= required (set by user for the exact habit).
-    :param period_counts: dict: a dictionary of period index to count
-    :param period_type: UnitNames: the enum indicating the period granularity (daily, weekly, monthly)
-    :param required: int: the number of times per period the habit is required
-    :return: int: streak - the number of consecutive periods in which count >= required.
-    """
-    streak = 0
-    now_idx = period_index(datetime.now(), period_type)
-    idx = now_idx
-    while period_counts.get(idx, 0) >= required:
-        streak += 1
-        idx = previous_period(idx, period_type)
-    return streak
-
 def longest_streak(period_counts: dict, period_type: database.UnitNames, required: int) -> int:
     """
     Count the maximum number of consecutive periods
@@ -57,11 +40,9 @@ def longest_streak(period_counts: dict, period_type: database.UnitNames, require
     """
     # get all the period‐indices where we met the requirement
     good_periods = sorted(idx for idx, cnt in period_counts.items() if cnt >= required)
-
     longest = 0
     current = 0
     prev_idx = None
-
     for idx in good_periods:
         # if this period is exactly the next after prev_idx, extend the run
         if prev_idx is not None and prev_idx == previous_period(idx, period_type):  #

@@ -136,7 +136,7 @@ def find_counter_by_name(db, name):
         return rows[0]
     return None
 
-def increment_counter(db, counter_id, event_time: DateTime = None):
+def increment_counter(db, counter_id, event_time: datetime):
     """
     Inserts the event entry with the timestamp into the tracker table.
     """

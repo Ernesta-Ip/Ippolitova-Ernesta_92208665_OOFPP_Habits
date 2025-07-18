@@ -140,7 +140,7 @@ def cli():
                 add_event(name, db, completed_at)
             except Exception as e:
                 print(f" Could not record completion for '{name}': {e}\n")
-            print(f"➕ Completed '{name}' on {completed_at}.\n")
+            print(f"➕ Completed '{name}' on {completed_at.strftime("%Y-%m-%d %H:%M:%S")}.\n")
 
         elif choice == "Analyse":
             # ask which kind of analysis

@@ -26,23 +26,6 @@ class Counter:
         """
         return f"{self.name}: {self.count} — {self.period_count}× per {self.period_type.label}"
 
-    # def store(self, db):
-    #     """Persist the counter to the database and output the insertion result.
-    #
-    #         Calls the `add_counter` helper to insert the counter record
-    #         in the given database, using this counter’s attributes.
-    #
-    #         :param db: A database connection or session object to use for the insert.
-    #         :param name (str): The unique name of the counter (from `self.name`).
-    #         :param description (str): A human-readable description of what the counter tracks (from `self.description`).
-    #         :param enum indicating the period granularity (from `self.period_type`).
-    #         :param period_count (int): The frequency of events per period (from `self.period_count`).
-    #         :return: None: Prints the result of the database operation (`lastrow`) to stdout.
-    #
-    #         """
-    #     lastrow = add_counter(db, self.name, self.description, self.period_type, self.period_count)
-    #     print(lastrow)
-
 def add_event(habit_name: str, db, date: datetime = None):
     """
     Add event to habit (check-off the task) by given name, raises increment_counter function.
